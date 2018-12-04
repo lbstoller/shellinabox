@@ -209,7 +209,7 @@ ${top_srcdir}/demo/vt100.js: ${top_srcdir}/shellinabox/vt100.js
 	ln "$?" "$@"
 
 shellinaboxd.1: ${top_srcdir}/shellinabox/shellinaboxd.man.in                 \
-		${top_srcdir}/config.h
+		config.h
 	@src="${top_srcdir}/shellinabox/shellinaboxd.man.in";                 \
 	echo preprocess  "$$src" '>'"$@";                                     \
 	if sed -e 's/^#define \([^ ]*\).*/\1/' -e t -e d config.h |           \
