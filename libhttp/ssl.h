@@ -223,5 +223,6 @@ int  sslUnblockSigPipe();
 int  sslPromoteToSSL(struct SSLSupport *ssl, SSL **sslHndl, int fd,
                      const char *buf, int len);
 void sslFreeHndl(SSL **sslHndl);
-
+void sslSetCertificateAndKey(struct SSLSupport *ssl,
+			     const char *certfile, const char *keyfile);
 #endif

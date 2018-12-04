@@ -122,6 +122,8 @@ void serverSetupSSL(struct Server *server, int enable, int force);
 void serverSetCertificate(struct Server *server, const char *filename,
                           int autoGenerateMissing);
 void serverSetCertificateFd(struct Server *server, int fd);
+void serverSetCertificateKeyfile(struct Server *server,
+				 const char *certname, const char *keyname);
 void serverSetNumericHosts(struct Server *server, int numericHosts);
 struct Trie *serverGetHttpHandlers(struct Server *server);
 

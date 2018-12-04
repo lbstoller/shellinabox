@@ -106,6 +106,8 @@ void serverSetupSSL(Server *server, int enable, int force);
 void serverSetCertificate(Server *server, const char *filename,
                           int autoGenerateMissing);
 void serverSetCertificateFd(Server *server, int fd);
+void serverSetCertificateKeyfile(struct Server *server,
+				 const char *certname, const char *keyname);
 void serverSetNumericHosts(Server *server, int numericHosts);
 
 void httpTransfer(HttpConnection *http, char *msg, int len);

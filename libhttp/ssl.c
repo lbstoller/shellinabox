@@ -524,12 +524,10 @@ static const unsigned char *sslPEMtoASN1(const unsigned char *pem,
   return ret;
 }
 
-static int sslSetCertificateFromFd(SSL_CTX *context, int fd) {
+static int sslSetCertificateFromMem(SSL_CTX *context,
+				    const unsigned char *data) {
   int rc                       = 0;
   check(serverSupportsSSL());
-  check(fd >= 0);
-  const unsigned char *data    = sslSecureReadASCIIFileToMem(fd);
-  check(!NOINTR(close(fd)));
   long dataSize                = (long)strlen((const char *)data);
   long certSize, rsaSize, dsaSize, ecSize, notypeSize;
   const unsigned char *record;
@@ -599,6 +597,13 @@ static int sslSetCertificateFromFd(SSL_CTX *context, int fd) {
   memset((char *)notype, 0, notypeSize);
   free((char *)notype);
   return rc;
+}
+
+static int sslSetCertificateFromFd(SSL_CTX *context, int fd) {
+  check(fd >= 0);
+  const unsigned char *data    = sslSecureReadASCIIFileToMem(fd);
+  check(!NOINTR(close(fd)));
+  return sslSetCertificateFromMem(context, data);
 }
 
 static int sslSetCertificateFromFile(SSL_CTX *context,
@@ -887,6 +892,45 @@ void sslSetCertificateFd(struct SSLSupport *ssl, int fd) {
           filename);
   }
   free(filename);
+  ssl->generateMissing  = 0;
+#endif
+}
+
+void sslSetCertificateAndKey(struct SSLSupport *ssl,
+			     const char *certfile, const char *keyfile) {
+#ifdef HAVE_OPENSSL
+  check(ssl->sslContext = SSL_CTX_new(SSLv23_server_method()));
+
+  int fd = open(certfile, O_RDONLY);
+  if (fd < 0) {
+    fatal("Cannot open %s.", certfile);
+  }
+  const unsigned char *certdata    = sslSecureReadASCIIFileToMem(fd);
+  check(!NOINTR(close(fd)));
+
+  fd = open(keyfile, O_RDONLY);
+  if (fd < 0) {
+    fatal("Cannot open %s.", keyfile);
+  }
+  const unsigned char *keydata    = sslSecureReadASCIIFileToMem(fd);
+  check(!NOINTR(close(fd)));
+  
+  // Combine into a single buffer and pass off.
+  const unsigned char *data;
+  size_t certlen = strlen((char *)certdata);
+  size_t keylen  = strlen((char *)keydata);
+  check((data     = malloc(certlen + keylen + 4)) != NULL);
+  memcpy((char *)data, certdata, certlen);
+  memcpy((char *)(data + certlen), keydata, keylen);
+  memset((char *)certdata, 0, certlen);
+  memset((char *)keydata, 0, keylen);
+  free((char *)certdata);
+  free((char *)keydata);
+
+  if (!sslSetCertificateFromMem(ssl->sslContext, data)) {
+    fatal("Cannot read valid certificate from %s,%s. Check file format.",
+          certfile, keyfile);
+  }
   ssl->generateMissing  = 0;
 #endif
 }

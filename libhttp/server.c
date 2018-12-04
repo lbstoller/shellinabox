@@ -687,6 +687,11 @@ void serverSetCertificateFd(struct Server *server, int fd) {
   sslSetCertificateFd(&server->ssl, fd);
 }
 
+void serverSetCertificateKeyfile(struct Server *server,
+				 const char *certname, const char *keyname) {
+  sslSetCertificateAndKey(&server->ssl, certname, keyname);
+}
+
 void serverSetNumericHosts(struct Server *server, int numericHosts) {
   server->numericHosts = numericHosts;
 }

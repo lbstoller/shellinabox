@@ -118,6 +118,8 @@ int                   enableUtmpLogging = 1;
 static char           *messagesOrigin   = NULL;
 static int            linkifyURLs       = 1;
 static char           *certificateDir;
+static char	      *certFile;
+static char	      *keyFile;
 static int            certificateFd     = -1;
 static HashMap        *externalFiles;
 static Server         *cgiServer;
@@ -914,6 +916,8 @@ static void parseArgs(int argc, char * const argv[]) {
       { "background",           2, 0, 'b' },
       { "cert",                 1, 0, 'c' },
       { "cert-fd",              1, 0,  0  },
+      { "certfile",             1, 0,  0  },
+      { "keyfile",              1, 0,  0  },
       { "css",                  1, 0,  0  },
       { "cgi",                  2, 0,  0  },
       { "debug",                0, 0, 'd' },
@@ -1006,6 +1010,38 @@ static void parseArgs(int argc, char * const argv[]) {
         fatal("[config] Invalid certificate file handle!");
       }
       check(!NOINTR(close(tmpFd)));
+    } else if (!idx--) {
+      // Certificate file
+      if (!hasSSL) {
+        warn("Ignoring certificate, as SSL support is unavailable");
+      }
+      if (certificateFd >= 0) {
+        fatal("Cannot set both a certificate fd and file");
+      }
+      if (certificateDir) {
+        fatal("Cannot set both a certificate dir and file");
+      }
+      struct stat st;
+      if (!optarg || !*optarg || stat(optarg, &st) || !S_ISREG(st.st_mode)) {
+        fatal("\"--certfile\" expects a file name");
+      }
+      check(certFile = strdup(optarg));
+    } else if (!idx--) {
+      // Key file
+      if (!hasSSL) {
+        warn("Ignoring key, as SSL support is unavailable");
+      }
+      if (certificateFd >= 0) {
+        fatal("Cannot set both a certificate fd and key file");
+      }
+      if (certificateDir) {
+        fatal("Cannot set both a certificate dir and key file");
+      }
+      struct stat st;
+      if (!optarg || !*optarg || stat(optarg, &st) || !S_ISREG(st.st_mode)) {
+        fatal("\"--keyfile\" expects a file name");
+      }
+      check(keyFile = strdup(optarg));
     } else if (!idx--) {
       // CSS
       struct stat st;
@@ -1343,7 +1379,10 @@ static void setUpSSL(Server *server) {
   // Enable SSL support (if available)
   if (enableSSL) {
     check(serverSupportsSSL());
-    if (certificateFd >= 0) {
+    if (certFile && keyFile) {
+      serverSetCertificateKeyfile(server, certFile, keyFile);
+    }
+    else if (certificateFd >= 0) {
       serverSetCertificateFd(server, certificateFd);
     } else if (certificateDir) {
       char *tmp;
@@ -1389,7 +1428,6 @@ int main(int argc, char * const argv[]) {
     // background.
     pid_t pid;
     int   fds[2];
-    dropPrivileges();
     check(!pipe(fds));
     check((pid    = fork()) >= 0);
     if (pid) {
@@ -1406,19 +1444,20 @@ int main(int argc, char * const argv[]) {
     cgiServer     = server;
     setUpSSL(server);
 
-    // Output a <frameset> that includes our root page
+    // Moved this after the ssl setup so that we can read the certs.
+    // Seems perfectly safe. 
+    dropPrivileges();
+
     check(port    = serverGetListeningPort(server));
-    printf("X-ShellInABox-Port: %d\r\n"
-           "X-ShellInABox-Pid: %d\r\n"
-           "X-ShellInABox-Session: %s\r\n"
-           "Content-type: text/html; charset=utf-8\r\n\r\n",
-           port, getpid(), cgiSessionKey);
-    UNUSED(cgiRootSize);
-    printfUnchecked(cgiRootStart, port, cgiSessionKey);
+    
+    // Send back the port and session key as plain text.
+    printf("Content-type: text/plain\r\n\r\n");
+    printf("%s:%d\r\n", cgiSessionKey, port);
+
     fflush(stdout);
     check(!NOINTR(close(fds[1])));
-    closeAllFds((int []){ launcherFd, serverGetFd(server) }, 2);
-    logSetLogLevel(MSG_QUIET);
+    closeAllFds((int []){ launcherFd, serverGetFd(server), 2 }, 3);
+    //logSetLogLevel(MSG_QUIET);
   }
 
   // Set log file format
@@ -1426,7 +1465,7 @@ int main(int argc, char * const argv[]) {
                         logIsQuiet() || logIsDefault());
 
   // Disable /quit handler
-  serverRegisterHttpHandler(server, "/quit", NULL, NULL);
+  //serverRegisterHttpHandler(server, "/quit", NULL, NULL);
 
   // Register HTTP handler(s)
   for (int i = 0; i < numServices; i++) {
