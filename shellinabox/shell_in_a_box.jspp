@@ -135,7 +135,7 @@ ShellInABox.prototype.sessionClosed = function() {
       }
       this.vt100('Session closed.');
     }
-    this.showReconnect(true);
+    //this.showReconnect(true);
     if (this.replayOnSession) {
       this.messageReplay('session', 'closed');
     }
