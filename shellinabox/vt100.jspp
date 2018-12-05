@@ -913,10 +913,10 @@ VT100.prototype.initializeElements = function(container) {
                          '<div id="padding"></div>' +
                          '<pre id="cursor">&nbsp;</pre>' +
                        '</div>' +
+                       '<input type="textfield" id="input" />' +
                        '<div class="hidden">' +
                          '<div id="usercss"></div>' +
                          '<pre><div><span id="space"></span></div></pre>' +
-                         '<input type="textfield" id="input" />' +
                          '<input type="text" id="cliphelper" />' +
                          (typeof suppressAllAudio != 'undefined' &&
                           suppressAllAudio ? "" :
