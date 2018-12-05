@@ -113,6 +113,14 @@ function ShellInABox(url, container) {
   this.replayOnSession = false;
   this.superClass.constructor.call(this, container);
 
+  // Handler for quit message from parent window.
+  var mybox = this;
+  addEventListener("message",
+		   function(event) {
+		       mybox.sendQuit();
+		   },
+		   false);
+  window.focus();
 
   // We have to initiate the first XMLHttpRequest from a timer. Otherwise,
   // Chrome never realizes that the page has loaded.
@@ -257,6 +265,27 @@ ShellInABox.prototype.sendKeys = function(keys) {
       }(this);
     request.send(content);
   }
+};
+
+ShellInABox.prototype.sendQuit = function() {
+    var request                = new XMLHttpRequest();
+    request.open('POST', this.url + 'quit/?', true);
+    request.setRequestHeader('Cache-Control', 'no-cache');
+    request.setRequestHeader('Content-Type',
+                            'application/x-www-form-urlencoded; charset=utf-8');
+    var content                = 'session=' +encodeURIComponent(this.session);
+
+    request.onreadystatechange = function(shellInABox) {
+      return function() {
+               try {
+		   return shellInABox.sessionClosed();
+               } catch (e) {
+		   console.info('Quit returned an error');
+		   console.info(e);
+               }
+             }
+      }(this);
+    request.send(content);
 };
 
 ShellInABox.prototype.keyPressReadyStateChange = function(request) {
