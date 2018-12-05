@@ -916,7 +916,7 @@ VT100.prototype.initializeElements = function(container) {
                        '<div class="hidden">' +
                          '<div id="usercss"></div>' +
                          '<pre><div><span id="space"></span></div></pre>' +
-                         '<input type="text" id="input" autocorrect="off" autocapitalize="off" />' +
+                         '<input type="textfield" id="input" />' +
                          '<input type="text" id="cliphelper" />' +
                          (typeof suppressAllAudio != 'undefined' &&
                           suppressAllAudio ? "" :
@@ -1014,15 +1014,17 @@ VT100.prototype.initializeElements = function(container) {
         vt100.indicateSize     = true;
       };
     }(this), 100);
-    this.addListener(window, 'resize',
-                     function(vt100) {
-                       return function() {
-                         vt100.hideContextMenu();
-                         vt100.resizer();
-                         vt100.showCurrentSize();
-                        }
-                      }(this));
+  }
+  this.addListener(window, 'resize',
+                   function(vt100) {
+                     return function() {
+                       vt100.hideContextMenu();
+                       vt100.resizer();
+                       vt100.showCurrentSize();
+                      }
+                    }(this));
 
+  if (!this.isEmbedded) {
     // Hide extra scrollbars attached to window
     document.body.style.margin = '0px';
     try { document.body.style.overflow ='hidden'; } catch (e) { }
@@ -1539,7 +1541,7 @@ VT100.prototype.setTextContent = function(elem, s) {
         }
       }
 
-      inner           += '<a target="vt100Link" href="' + fullUrl +
+      inner           += '<a target="_blank" href="' + fullUrl +
                          '">' + url + '</a>';
       consumed        += RegExp.lastMatch.length;
       s                = s.substr(consumed);
@@ -2804,6 +2806,8 @@ VT100.prototype.handleKey = function(event) {
       // case 187: /* =            */ ch = this.applyModifiers(61, event); break;
       case 188: /* ,            */ ch = this.applyModifiers(44, event); break;
       case 189: /* -            */ ch = this.applyModifiers(45, event); break;
+      // Firefox fix
+      case 173: /* -            */ ch = this.applyModifiers(45, event); break;
       case 190: /* .            */ ch = this.applyModifiers(46, event); break;
       case 191: /* /            */ ch = this.applyModifiers(47, event); break;
       // Conflicts with dead key " on Swiss keyboards
@@ -2948,6 +2952,8 @@ VT100.prototype.fixEvent = function(event) {
     case 187: /* = -> + */ u = 61; s =  43; break;
     case 188: /* , -> < */ u = 44; s =  60; break;
     case 189: /* - -> _ */ u = 45; s =  95; break;
+    // Firefox fix.
+    case 173: /* - -> _ */ u = 45; s =  95; break;
     case 190: /* . -> > */ u = 46; s =  62; break;
     case 191: /* / -> ? */ u = 47; s =  63; break;
     case 192: /* ` -> ~ */ u = 96; s = 126; break;
